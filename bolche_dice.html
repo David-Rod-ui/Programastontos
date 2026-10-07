@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bolche Dice - Dark Mode</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+        :root {
+            --bg-color: #0f172a;
+            --surface-color: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            
+            /* Colores base (Estado Inactivo - Mate) */
+            --color-green-base: #065f46;
+            --color-red-base: #9f1239;
+            --color-yellow-base: #92400e;
+            --color-blue-base: #1e3a8a;
+
+            /* Colores activos (Glow - Neón) */
+            --color-green-active: #10b981;
+            --color-red-active: #f43f5e;
+            --color-yellow-active: #f59e0b;
+            --color-blue-active: #3b82f6;
+
+            /* Sombras Neon */
+            --glow-green: 0 0 25px 5px rgba(16, 185, 129, 0.6);
+            --glow-red: 0 0 25px 5px rgba(244, 63, 94, 0.6);
+            --glow-yellow: 0 0 25px 5px rgba(245, 158, 11, 0.6);
+            --glow-blue: 0 0 25px 5px rgba(59, 130, 246, 0.6);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            user-select: none; /* Previene la selección accidental en móviles */
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+            padding: 2rem;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #e2e8f0, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status {
+            font-size: 1.25rem;
+            font-weight: 600;
+            height: 1.5rem; /* Evita saltos de layout cuando cambia el texto */
+            color: var(--text-muted);
+            transition: color 0.3s ease;
+        }
+
+        .simon-board-container {
+            position: relative;
+            width: 320px;
+            height: 320px;
+            border-radius: 50%;
+            background-color: #000;
+            padding: 12px;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.8), inset 0 0 10px rgba(255,255,255,0.05);
+        }
+
+        .simon-board {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 12px;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+
+        /* Botones cuadrantes */
+        .simon-btn {
+            border: none;
+            outline: none;
+            cursor: pointer;
+            transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+        }
+        
+        .simon-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Forma de los cuadrantes */
+        .btn-tl { border-top-left-radius: 100%; background-color: var(--color-green-base); }
+        .btn-tr { border-top-right-radius: 100%; background-color: var(--color-red-base); }
+        .btn-bl { border-bottom-left-radius: 100%; background-color: var(--color-yellow-base); }
+        .btn-br { border-bottom-right-radius: 100%; background-color: var(--color-blue-base); }
+
+        /* Clases activas inyectadas por JS */
+        .btn-tl.active { background-color: var(--color-green-active); box-shadow: var(--glow-green); z-index: 10; }
+        .btn-tr.active { background-color: var(--color-red-active); box-shadow: var(--glow-red); z-index: 10; }
+        .btn-bl.active { background-color: var(--color-yellow-active); box-shadow: var(--glow-yellow); z-index: 10; }
+        .btn-br.active { background-color: var(--color-blue-active); box-shadow: var(--glow-blue); z-index: 10; }
+
+        /* Círculo central para contadores o estética */
+        .center-hub {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 130px;
+            height: 130px;
+            background-color: var(--bg-color);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 8px solid #000;
+            box-shadow: inset 0 4px 10px rgba(0,0,0,0.5);
+            z-index: 20;
+        }
+
+        .round-counter {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--text-color);
+            line-height: 1;
+        }
+
+        .round-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .btn-control {
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.75rem 2rem;
+            border-radius: 9999px; /* Pill shape */
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-control:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .btn-control:active {
+            transform: translateY(0);
+        }
+
+        /* Clase utilitaria para bloquear clics en todo el tablero */
+        .unclickable {
+            pointer-events: none;
+        }
+        
+        .error-shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+
+        /* Responsive para móviles pequeños */
+        @media (max-width: 400px) {
+            .simon-board-container {
+                width: 280px;
+                height: 280px;
+            }
+            .center-hub {
+                width: 110px;
+                height: 110px;
+            }
+            .round-counter {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>Bolche Dice</h1>
+            <div id="statusText" class="status">Presiona Iniciar para jugar</div>
+        </div>
+
+        <div class="simon-board-container" id="boardContainer">
+            <div class="simon-board" id="simonBoard">
+                <!-- Data-id del 0 al 3 representa los 4 colores -->
+                <button class="simon-btn btn-tl" data-id="0" aria-label="Verde"></button>
+                <button class="simon-btn btn-tr" data-id="1" aria-label="Rojo"></button>
+                <button class="simon-btn btn-bl" data-id="2" aria-label="Amarillo"></button>
+                <button class="simon-btn btn-br" data-id="3" aria-label="Azul"></button>
+            </div>
+            <div class="center-hub">
+                <span id="roundCounter" class="round-counter">-</span>
+                <span class="round-label">Ronda</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn" class="btn-control">Iniciar Juego</button>
+        </div>
+    </div>
+
+    <script>
+        // Variables de Estado
+        let sequence = [];
+        let playerSequence = [];
+        let round = 0;
+        let isPlayingSequence = false;
+        let gameActive = false;
+
+        // Referencias al DOM
+        const statusText = document.getElementById('statusText');
+        const roundCounter = document.getElementById('roundCounter');
+        const startBtn = document.getElementById('startBtn');
+        const simonBoard = document.getElementById('simonBoard');
+        const boardContainer = document.getElementById('boardContainer');
+        const buttons = document.querySelectorAll('.simon-btn');
+
+        // Mapeo de IDs (para facilitar depuración si se necesita)
+        // 0: Top Left (Green)
+        // 1: Top Right (Red)
+        // 2: Bottom Left (Yellow)
+        // 3: Bottom Right (Blue)
+
+        /**
+         * Pausa la ejecución por un tiempo determinado
+         * @param {number} ms - Milisegundos a esperar
+         */
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        /**
+         * Actualiza el texto de estado en la UI
+         * @param {string} text - El mensaje a mostrar
+         * @param {string} color - Color opcional (hex, rgb o var)
+         */
+        const updateStatus = (text, color = "var(--text-muted)") => {
+            statusText.textContent = text;
+            statusText.style.color = color;
+        };
+
+        /**
+         * Ilumina un botón específico y lo apaga tras un breve tiempo
+         * @param {number} id - El data-id del botón a iluminar
+         * @param {number} duration - Tiempo en ms que permanece encendido
+         */
+        async function flashButton(id, duration = 400) {
+            const btn = document.querySelector(`[data-id="${id}"]`);
+            if (!btn) return;
+
+            btn.classList.add('active');
+            await sleep(duration);
+            btn.classList.remove('active');
+        }
+
+        /**
+         * Reproduce la secuencia generada por la máquina.
+         * Bloquea la interacción del usuario mientras se ejecuta.
+         */
+        async function playMachineSequence() {
+            // Bloqueamos input
+            isPlayingSequence = true;
+            simonBoard.classList.add('unclickable');
+            
+            updateStatus("Observa la secuencia...", "var(--text-color)");
+            
+            // Pequeña pausa antes de empezar a mostrar los colores
+            await sleep(800);
+
+            // Iteramos sobre la secuencia actual
+            for (let i = 0; i < sequence.length; i++) {
+                // A medida que las rondas avanzan, podríamos hacer que parpadee más rápido.
+                // Por ahora usamos una velocidad constante y cómoda.
+                await flashButton(sequence[i], 400);
+                await sleep(250); // Pausa entre colores para distinguirlos
+            }
+
+            // Habilitamos input del jugador
+            isPlayingSequence = false;
+            simonBoard.classList.remove('unclickable');
+            playerSequence = []; // Reseteamos los pasos del jugador para esta ronda
+            updateStatus("¡Tu turno!", "var(--color-green-active)");
+        }
+
+        /**
+         * Avanza a la siguiente ronda: incrementa contador, añade paso aleatorio y reproduce.
+         */
+        function nextRound() {
+            round++;
+            roundCounter.textContent = round;
+            
+            // Añadir número aleatorio (0, 1, 2, 3) a la secuencia
+            const nextStep = Math.floor(Math.random() * 4);
+            sequence.push(nextStep);
+
+            playMachineSequence();
+        }
+
+        /**
+         * Termina el juego, muestra error y permite reiniciar.
+         */
+        function gameOver() {
+            gameActive = false;
+            simonBoard.classList.add('unclickable');
+            updateStatus("¡Fallaste!", "var(--color-red-active)");
+            startBtn.textContent = "Reiniciar Juego";
+            startBtn.disabled = false;
+            
+            // Animación visual de fallo
+            boardContainer.classList.add('error-shake');
+            setTimeout(() => {
+                boardContainer.classList.remove('error-shake');
+            }, 500);
+            
+            // Destello rojo en todos los botones brevemente
+            buttons.forEach(btn => btn.classList.add('active'));
+            setTimeout(() => {
+                buttons.forEach(btn => btn.classList.remove('active'));
+            }, 300);
+        }
+
+        /**
+         * Maneja el click del usuario en un cuadrante del tablero.
+         */
+        function handleUserClick(e) {
+            // Ignorar clicks si la máquina está jugando o el juego no está activo
+            if (isPlayingSequence || !gameActive) return;
+
+            const btn = e.target.closest('.simon-btn');
+            if (!btn) return;
+
+            const id = parseInt(btn.dataset.id);
+            
+            // Feedback visual rápido
+            flashButton(id, 200);
+
+            // Registrar el paso del jugador
+            playerSequence.push(id);
+            
+            // Obtener el índice actual que estamos comprobando
+            const currentIndex = playerSequence.length - 1;
+
+            // VALIDACIÓN LÓGICA
+            if (playerSequence[currentIndex] !== sequence[currentIndex]) {
+                // El usuario se equivocó
+                gameOver();
+                return;
+            }
+
+            // Si el usuario acertó toda la secuencia hasta ahora
+            if (playerSequence.length === sequence.length) {
+                // Bloquear temporalmente
+                simonBoard.classList.add('unclickable');
+                updateStatus("¡Correcto!", "var(--color-blue-active)");
+                
+                // Esperar un poco y pasar a la siguiente ronda
+                setTimeout(() => {
+                    nextRound();
+                }, 1000);
+            }
+        }
+
+        /**
+         * Inicializa o reinicia las variables y arranca el juego.
+         */
+        function startGame() {
+            sequence = [];
+            playerSequence = [];
+            round = 0;
+            gameActive = true;
+            
+            startBtn.textContent = "Juego en progreso...";
+            startBtn.disabled = true; // Desactivar botón durante el juego
+            
+            // Quitar clase de bloqueo si la hubiera (de un game over previo)
+            simonBoard.classList.remove('unclickable');
+            
+            nextRound();
+        }
+
+        // Listener para el botón iniciar/reiniciar
+        startBtn.addEventListener('click', startGame);
+
+        // Listener global de click en el contenedor (Delegación de eventos)
+        simonBoard.addEventListener('click', handleUserClick);
+        
+        // Soporte adicional táctil para mejor respuesta en móviles
+        simonBoard.addEventListener('touchstart', (e) => {
+            // Evitar que dispare también el 'click' inmediatamente si no es necesario,
+            // pero usar 'click' suele ser suficiente para botones estáticos. 
+            // Si hay lag en móviles antiguos, se puede invocar handleUserClick(e).
+            // Lo dejamos comentado a favor del evento click estándar nativo.
+            // e.preventDefault(); 
+            // handleUserClick(e);
+        }, { passive: true });
+
+    </script>
+</body>
+</html>
